@@ -59,7 +59,7 @@
         }
 
         .logo {
-            max-width: 80px;
+            max-width: 150px;
             height: auto;
         }
 
@@ -191,13 +191,16 @@
             font-size: 1rem;
         }
 
-        /* === ALTERAÇÃO: DESCRIÇÃO COMPLETA NO MOBILE === */
+        /* === ALTERAÇÃO: APENAS PRIMEIRA LINHA NO CATÁLOGO === */
         .product-description {
             font-size: 0.85rem;
             color: #666;
             margin-bottom: 8px;
             line-height: 1.3;
-            /* Remove o height fixo e overflow hidden para desktop */
+            height: 1.3em; /* Apenas uma linha */
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
 
         .product-price {
@@ -804,15 +807,6 @@
             .product-image {
                 height: 180px; /* Ainda maior no desktop */
             }
-            
-            /* No desktop, limitamos a descrição a 2 linhas */
-            .product-description {
-                height: 40px;
-                overflow: hidden;
-                display: -webkit-box;
-                -webkit-line-clamp: 2;
-                -webkit-box-orient: vertical;
-            }
         }
 
         @media (max-width: 767px) {
@@ -836,14 +830,6 @@
             
             .form-row {
                 grid-template-columns: 1fr;
-            }
-            
-            /* === ALTERAÇÃO: NO MOBILE A DESCRIÇÃO É COMPLETA === */
-            .product-description {
-                height: auto; /* Remove qualquer limitação de altura */
-                overflow: visible; /* Permite que o texto flua livremente */
-                display: block; /* Remove qualquer limitação de linhas */
-                margin-bottom: 10px;
             }
             
             .products-grid {
@@ -897,7 +883,7 @@
     <div class="header">
         <div class="logo-container">
             <!-- ALTERE A LOGO AQUI -->
-            <img src="https://res.cloudinary.com/dnluplt44/image/upload/v1759236835/Logo_do_Showburger_com_Hamb%C3%BArguer_Ilustrado_ia4xzh.png" alt="Logo do Estabelecimento" class="logo">
+            <img src="https://via.placeholder.com/150x50?text=LOGO" alt="Logo do Estabelecimento" class="logo">
         </div>
         
         <div class="menu-toggle">
@@ -1129,6 +1115,12 @@
             appId: "1:467740109971:web:be08feec9f8e76c1167166"
         };
 
+        // ===== CONFIGURAÇÃO DAS COLEÇÕES (ALTERE AQUI PARA CADA ESTABELECIMENTO) =====
+        const FIREBASE_COLLECTIONS = {
+            PRODUCTS: 'produtos',      // Coleção de produtos
+            CATEGORIES: 'categorias'   // Coleção de categorias
+        };
+
         // Inicializar Firebase
         try {
             firebase.initializeApp(firebaseConfig);
@@ -1206,7 +1198,7 @@
         async function loadCategoriesFromFirebase() {
             try {
                 console.log('📥 Carregando categorias do Firebase...');
-                const snapshot = await db.collection('categories').orderBy('name').get();
+                const snapshot = await db.collection(FIREBASE_COLLECTIONS.CATEGORIES).orderBy('name').get();
                 
                 categories = [{ id: 'all', name: 'Todos' }];
                 
@@ -1253,7 +1245,7 @@
                 }
 
                 console.log('📝 Salvando no Firestore...');
-                const docRef = await db.collection('categories').add({
+                const docRef = await db.collection(FIREBASE_COLLECTIONS.CATEGORIES).add({
                     name: categoryName.trim(),
                     createdAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
@@ -1299,7 +1291,7 @@
         async function addProduct(productData) {
             try {
                 console.log('🆕 Adicionando produto:', productData.name);
-                const docRef = await db.collection('products').add({
+                const docRef = await db.collection(FIREBASE_COLLECTIONS.PRODUCTS).add({
                     ...productData,
                     createdAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
@@ -1319,7 +1311,7 @@
         async function updateProduct(productId, productData) {
             try {
                 console.log('✏️ Atualizando produto:', productId);
-                await db.collection('products').doc(productId).update({
+                await db.collection(FIREBASE_COLLECTIONS.PRODUCTS).doc(productId).update({
                     ...productData,
                     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
@@ -1338,7 +1330,7 @@
         // Carregar produtos do Firebase
         async function loadProductsFromFirebase() {
             try {
-                const snapshot = await db.collection('products').get();
+                const snapshot = await db.collection(FIREBASE_COLLECTIONS.PRODUCTS).get();
                 products = [];
                 snapshot.forEach(doc => {
                     products.push({
@@ -1358,7 +1350,7 @@
         async function removeProduct(productId) {
             if (confirm('Tem certeza que deseja remover este produto?')) {
                 try {
-                    await db.collection('products').doc(productId).delete();
+                    await db.collection(FIREBASE_COLLECTIONS.PRODUCTS).doc(productId).delete();
                     await loadProductsFromFirebase();
                     alert('Produto removido com sucesso!');
                 } catch (error) {
@@ -1378,7 +1370,7 @@
             if (confirm('Tem certeza que deseja remover esta categoria?')) {
                 try {
                     // Verificar se existem produtos nesta categoria
-                    const productsSnapshot = await db.collection('products')
+                    const productsSnapshot = await db.collection(FIREBASE_COLLECTIONS.PRODUCTS)
                         .where('category', '==', categoryId)
                         .get();
                     
@@ -1387,7 +1379,7 @@
                         return;
                     }
 
-                    await db.collection('categories').doc(categoryId).delete();
+                    await db.collection(FIREBASE_COLLECTIONS.CATEGORIES).doc(categoryId).delete();
                     await loadCategoriesFromFirebase();
                     alert('Categoria removida com sucesso!');
                 } catch (error) {
@@ -1840,7 +1832,7 @@
             }
             
             if (formData.payment === 'pix') {
-                message += `*INFORMAÇões PARA PAGAMENTO PIX:*\n`;
+                message += `*INFORMAÇÕES PARA PAGAMENTO PIX:*\n`;
                 message += `Chave PIX: ${establishmentData.pixKey}\n`;
                 message += `*IMPORTANTE:* Envie o comprovante de pagamento após realizar a transferência.\n\n`;
             }
