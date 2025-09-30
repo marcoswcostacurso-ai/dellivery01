@@ -808,7 +808,7 @@
             background-color: var(--dark-color);
         }
 
-        /* ===== FORMULÁRIO DE SELEÇÃO DE COMBOS ===== */
+        /* ===== FORMULÁRIO DE SELEÇÃO DE MÚLTIPLAS CATEGORIAS ===== */
         .combo-selection {
             margin: 15px 0;
             padding: 15px;
@@ -872,7 +872,7 @@
             color: #666;
         }
 
-        /* ===== ITEM DO CARRINHO COM COMBO ===== */
+        /* ===== ITEM DO CARRINHO COM MÚLTIPLAS ESCOLHAS ===== */
         .combo-item {
             background-color: #f8f9fa;
             border-radius: 5px;
@@ -885,6 +885,18 @@
             font-size: 0.85rem;
             color: #666;
             font-style: italic;
+        }
+
+        /* ===== BOTÃO VOLTAR CORRIGIDO ===== */
+        .back-btn-fixed {
+            background-color: #ddd;
+            color: #333;
+            border: none;
+            border-radius: 5px;
+            padding: 10px 15px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 10px;
         }
 
         /* ===== RESPONSIVIDADE ===== */
@@ -1045,7 +1057,7 @@
                 <h2 class="popup-name"></h2>
                 <p class="popup-description"></p>
                 <div class="popup-price"></div>
-                <!-- Formulário de seleção de combo será inserido aqui dinamicamente -->
+                <!-- Formulário de seleção de múltiplas categorias será inserido aqui dinamicamente -->
                 <div id="combo-selection-container"></div>
                 <div class="popup-actions">
                     <button class="popup-back-btn">Voltar ao Catálogo</button>
@@ -1094,13 +1106,13 @@
                         </div>
                     </div>
                     <div class="form-group">
-                        <label for="combo-category">Categoria para Combo (opcional):</label>
-                        <select id="combo-category">
+                        <label for="combo-categories">Categorias para Montagem (opcional):</label>
+                        <select id="combo-categories" multiple style="height: 120px;">
                             <option value="">Nenhuma - Produto normal</option>
                             <!-- Categorias serão carregadas dinamicamente -->
                         </select>
                         <small style="color: #666; font-size: 0.85rem;">
-                            Se selecionar uma categoria, o cliente poderá escolher um produto dessa categoria ao adicionar este item ao carrinho.
+                            Selecione múltiplas categorias (segure Ctrl/Cmd) para permitir que o cliente escolha um produto de cada categoria ao adicionar este item ao carrinho.
                         </small>
                     </div>
                     <div class="form-buttons">
@@ -1198,7 +1210,7 @@
                 </div>
                 
                 <div class="form-buttons">
-                    <button type="button" class="back-btn">Voltar</button>
+                    <button type="button" class="back-btn-fixed" id="back-to-cart">Voltar ao Carrinho</button>
                     <button type="submit" class="send-btn">Enviar Pedido</button>
                 </div>
             </form>
@@ -1248,7 +1260,7 @@
         let products = [];
         let isEditing = false;
         let currentEditingProductId = null;
-        let selectedComboProduct = null; // Produto selecionado no combo
+        let selectedComboProducts = {}; // Produtos selecionados para cada categoria de combo
 
         // ===== ELEMENTOS DO DOM =====
         const categoriesSidebar = document.querySelector('.categories-sidebar');
@@ -1264,7 +1276,6 @@
         const cartCount = document.querySelector('.cart-count');
         const orderModal = document.getElementById('order-modal');
         const loginModal = document.getElementById('login-modal');
-        const backBtn = document.querySelector('.back-btn');
         const orderForm = document.getElementById('order-form');
         const loginForm = document.getElementById('login-form');
         const overlay = document.querySelector('.overlay');
@@ -1275,7 +1286,7 @@
         const productForm = document.getElementById('product-form');
         const productsList = document.getElementById('products-list');
         const productCategorySelect = document.getElementById('product-category');
-        const comboCategorySelect = document.getElementById('combo-category');
+        const comboCategoriesSelect = document.getElementById('combo-categories');
         const addCategoryBtn = document.getElementById('add-category');
         const newCategoryInput = document.getElementById('new-category');
         const categoriesList = document.getElementById('categories-list');
@@ -1285,6 +1296,7 @@
         const submitProductBtn = document.getElementById('submit-product');
         const cancelEditBtn = document.getElementById('cancel-edit');
         const comboSelectionContainer = document.getElementById('combo-selection-container');
+        const backToCartBtn = document.getElementById('back-to-cart');
 
         // ===== ELEMENTOS DO POPUP DE PRODUTO =====
         const productPopup = document.querySelector('.product-popup');
@@ -1498,7 +1510,7 @@
         // Atualizar seletor de categorias no formulário admin
         function updateCategorySelect() {
             productCategorySelect.innerHTML = '<option value="">Selecione uma categoria</option>';
-            comboCategorySelect.innerHTML = '<option value="">Nenhuma - Produto normal</option>';
+            comboCategoriesSelect.innerHTML = '';
             
             categories.forEach(category => {
                 if (category.id !== 'all') {
@@ -1510,7 +1522,7 @@
                     const comboOption = document.createElement('option');
                     comboOption.value = category.id;
                     comboOption.textContent = category.name;
-                    comboCategorySelect.appendChild(comboOption);
+                    comboCategoriesSelect.appendChild(comboOption);
                 }
             });
         }
@@ -1547,9 +1559,11 @@
                 const productItem = document.createElement('div');
                 productItem.className = 'product-item';
                 
-                const comboInfo = product.comboCategory ? 
+                const comboInfo = product.comboCategories && product.comboCategories.length > 0 ? 
                     `<div style="font-size: 0.8rem; color: var(--info-color); margin-top: 5px;">
-                        <i class="fas fa-link"></i> Combo com: ${categories.find(c => c.id === product.comboCategory)?.name || product.comboCategory}
+                        <i class="fas fa-link"></i> Montagem com: ${product.comboCategories.map(catId => 
+                            categories.find(c => c.id === catId)?.name || catId
+                        ).join(', ')}
                     </div>` : '';
                 
                 productItem.innerHTML = `
@@ -1595,7 +1609,17 @@
             document.getElementById('product-description').value = product.description;
             document.getElementById('product-category').value = product.category;
             document.getElementById('product-image').value = product.image;
-            document.getElementById('combo-category').value = product.comboCategory || '';
+            
+            // Preencher categorias de combo (múltiplas)
+            if (product.comboCategories && product.comboCategories.length > 0) {
+                const options = comboCategoriesSelect.options;
+                for (let i = 0; i < options.length; i++) {
+                    options[i].selected = product.comboCategories.includes(options[i].value);
+                }
+            } else {
+                comboCategoriesSelect.selectedIndex = -1;
+            }
+            
             productIdInput.value = productId;
             
             // Alterar o formulário para modo de edição
@@ -1618,42 +1642,50 @@
             submitProductBtn.textContent = 'Adicionar Produto';
             cancelEditBtn.style.display = 'none';
             productIdInput.value = '';
+            comboCategoriesSelect.selectedIndex = -1;
         }
 
-        // Criar formulário de seleção de combo
-        function createComboSelection(comboCategoryId) {
-            const comboProducts = products.filter(product => product.category === comboCategoryId);
+        // Criar formulário de seleção de múltiplas categorias
+        function createComboSelection(comboCategoryIds) {
+            let html = '';
             
-            if (comboProducts.length === 0) {
-                return '';
-            }
-            
-            let html = `
-                <div class="combo-selection">
-                    <div class="combo-title">
-                        <i class="fas fa-gift"></i>
-                        Escolha um item para incluir no combo:
-                    </div>
-                    <div class="combo-options">
-            `;
-            
-            comboProducts.forEach(product => {
+            comboCategoryIds.forEach(categoryId => {
+                const category = categories.find(c => c.id === categoryId);
+                if (!category) return;
+                
+                const categoryProducts = products.filter(product => product.category === categoryId);
+                
+                if (categoryProducts.length === 0) {
+                    return;
+                }
+                
                 html += `
-                    <label class="combo-option">
-                        <input type="radio" name="combo-product" value="${product.id}" required>
-                        <img src="${product.image}" alt="${product.name}">
-                        <div class="combo-option-info">
-                            <div class="combo-option-name">${product.name}</div>
-                            <div class="combo-option-description">${product.description}</div>
+                    <div class="combo-selection">
+                        <div class="combo-title">
+                            <i class="fas fa-gift"></i>
+                            Escolha um ${category.name}:
                         </div>
-                    </label>
+                        <div class="combo-options">
+                `;
+                
+                categoryProducts.forEach(product => {
+                    html += `
+                        <label class="combo-option">
+                            <input type="radio" name="combo-product-${categoryId}" value="${product.id}" required>
+                            <img src="${product.image}" alt="${product.name}">
+                            <div class="combo-option-info">
+                                <div class="combo-option-name">${product.name}</div>
+                                <div class="combo-option-description">${product.description}</div>
+                            </div>
+                        </label>
+                    `;
+                });
+                
+                html += `
+                        </div>
+                    </div>
                 `;
             });
-            
-            html += `
-                    </div>
-                </div>
-            `;
             
             return html;
         }
@@ -1785,16 +1817,22 @@
             const addButton = card.querySelector('.add-to-cart');
             addButton.addEventListener('click', () => {
                 const quantity = productQuantities[product.id];
-                addToCart(product.id, product.name, product.price, quantity);
                 
-                productQuantities[product.id] = 1;
-                quantityDisplay.textContent = '1';
-                
-                const originalText = addButton.textContent;
-                addButton.textContent = 'Adicionado!';
-                setTimeout(() => {
-                    addButton.textContent = originalText;
-                }, 1000);
+                // Verificar se é um produto com múltiplas categorias
+                if (product.comboCategories && product.comboCategories.length > 0) {
+                    openProductPopup(product);
+                } else {
+                    addToCart(product.id, product.name, product.price, quantity);
+                    
+                    productQuantities[product.id] = 1;
+                    quantityDisplay.textContent = '1';
+                    
+                    const originalText = addButton.textContent;
+                    addButton.textContent = 'Adicionado!';
+                    setTimeout(() => {
+                        addButton.textContent = originalText;
+                    }, 1000);
+                }
             });
             
             // Adicionar evento de clique na imagem para abrir o popup
@@ -1815,18 +1853,20 @@
             popupPrice.textContent = `R$ ${product.price.toFixed(2)}`;
             
             // Limpar seleção anterior
-            selectedComboProduct = null;
+            selectedComboProducts = {};
             
-            // Verificar se é um produto com combo
-            if (product.comboCategory) {
-                const comboHtml = createComboSelection(product.comboCategory);
+            // Verificar se é um produto com múltiplas categorias
+            if (product.comboCategories && product.comboCategories.length > 0) {
+                const comboHtml = createComboSelection(product.comboCategories);
                 comboSelectionContainer.innerHTML = comboHtml;
                 
                 // Adicionar event listeners para os radios
-                const radioButtons = comboSelectionContainer.querySelectorAll('input[name="combo-product"]');
-                radioButtons.forEach(radio => {
-                    radio.addEventListener('change', (e) => {
-                        selectedComboProduct = products.find(p => p.id === e.target.value);
+                product.comboCategories.forEach(categoryId => {
+                    const radioButtons = comboSelectionContainer.querySelectorAll(`input[name="combo-product-${categoryId}"]`);
+                    radioButtons.forEach(radio => {
+                        radio.addEventListener('change', (e) => {
+                            selectedComboProducts[categoryId] = products.find(p => p.id === e.target.value);
+                        });
                     });
                 });
             } else {
@@ -1837,10 +1877,19 @@
             popupAddBtn.onclick = () => {
                 const quantity = productQuantities[product.id] || 1;
                 
-                // Verificar se é um combo e se foi selecionado um produto
-                if (product.comboCategory && !selectedComboProduct) {
-                    alert('Por favor, selecione um item para incluir no combo.');
-                    return;
+                // Verificar se é um produto com múltiplas categorias e se foram selecionados produtos
+                if (product.comboCategories && product.comboCategories.length > 0) {
+                    // Verificar se todas as categorias têm um produto selecionado
+                    const missingCategories = product.comboCategories.filter(catId => !selectedComboProducts[catId]);
+                    
+                    if (missingCategories.length > 0) {
+                        const categoryNames = missingCategories.map(catId => 
+                            categories.find(c => c.id === catId)?.name || catId
+                        ).join(', ');
+                        
+                        alert(`Por favor, selecione um item para: ${categoryNames}`);
+                        return;
+                    }
                 }
                 
                 addToCart(
@@ -1848,7 +1897,7 @@
                     product.name, 
                     product.price, 
                     quantity,
-                    selectedComboProduct
+                    selectedComboProducts
                 );
                 
                 productQuantities[product.id] = 1;
@@ -1859,6 +1908,11 @@
                 setTimeout(() => {
                     popupAddBtn.textContent = originalText;
                 }, 1000);
+                
+                // Fechar popup após adicionar
+                setTimeout(() => {
+                    closeProductPopup();
+                }, 800);
             };
             
             productPopup.classList.add('open');
@@ -1886,7 +1940,7 @@
         }
 
         // Adicionar produto ao carrinho
-        function addToCart(productId, productName, productPrice, quantity = 1, comboProduct = null) {
+        function addToCart(productId, productName, productPrice, quantity = 1, comboProducts = null) {
             const cartItem = {
                 id: productId,
                 name: productName,
@@ -1894,13 +1948,9 @@
                 quantity: quantity
             };
             
-            // Adicionar informação do combo se existir
-            if (comboProduct) {
-                cartItem.comboProduct = {
-                    id: comboProduct.id,
-                    name: comboProduct.name,
-                    price: comboProduct.price
-                };
+            // Adicionar informações dos produtos selecionados nas categorias de combo
+            if (comboProducts && Object.keys(comboProducts).length > 0) {
+                cartItem.comboProducts = comboProducts;
             }
             
             cart.push(cartItem);
@@ -1953,14 +2003,16 @@
                 cartItemElement.className = 'cart-item';
                 
                 let comboHtml = '';
-                if (item.comboProduct) {
-                    comboHtml = `
-                        <div class="combo-item">
-                            <div class="combo-item-name">
-                                <i class="fas fa-gift"></i> Inclui: ${item.comboProduct.name}
+                if (item.comboProducts && Object.keys(item.comboProducts).length > 0) {
+                    Object.values(item.comboProducts).forEach(comboProduct => {
+                        comboHtml += `
+                            <div class="combo-item">
+                                <div class="combo-item-name">
+                                    <i class="fas fa-gift"></i> Inclui: ${comboProduct.name}
+                                </div>
                             </div>
-                        </div>
-                    `;
+                        `;
+                    });
                 }
                 
                 cartItemElement.innerHTML = `
@@ -2030,9 +2082,11 @@
             cart.forEach(item => {
                 message += `- ${item.quantity}x ${item.name} - R$ ${(item.price * item.quantity).toFixed(2)}\n`;
                 
-                // Adicionar produto do combo se existir
-                if (item.comboProduct) {
-                    message += `  🎁 Inclui: ${item.comboProduct.name}\n`;
+                // Adicionar produtos dos combos se existirem
+                if (item.comboProducts && Object.keys(item.comboProducts).length > 0) {
+                    Object.values(item.comboProducts).forEach(comboProduct => {
+                        message += `  🎁 Inclui: ${comboProduct.name}\n`;
+                    });
                 }
             });
             
@@ -2110,8 +2164,8 @@
             overlay.classList.add('active');
         });
 
-        // Voltar ao carrinho
-        backBtn.addEventListener('click', () => {
+        // CORREÇÃO: Botão "Voltar ao Carrinho" no formulário de pedido
+        backToCartBtn.addEventListener('click', () => {
             orderModal.style.display = 'none';
             overlay.classList.remove('active');
             openCart();
@@ -2192,10 +2246,13 @@
                 image: document.getElementById('product-image').value
             };
             
-            // Adicionar categoria do combo se selecionada
-            const comboCategory = document.getElementById('combo-category').value;
-            if (comboCategory) {
-                productData.comboCategory = comboCategory;
+            // Adicionar categorias de combo (múltiplas) se selecionadas
+            const selectedComboCategories = Array.from(comboCategoriesSelect.selectedOptions)
+                .map(option => option.value)
+                .filter(value => value !== '');
+            
+            if (selectedComboCategories.length > 0) {
+                productData.comboCategories = selectedComboCategories;
             }
             
             if (isEditing && currentEditingProductId) {
