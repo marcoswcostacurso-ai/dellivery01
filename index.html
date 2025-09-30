@@ -19,6 +19,7 @@
             --text-color: #333; /* Cor do texto */
             --success-color: #2ecc71; /* Verde para confirmações */
             --warning-color: #f39c12; /* Laranja para edição */
+            --info-color: #3498db; /* Azul para informações */
         }
 
         /* ===== ESTILOS GERAIS ===== */
@@ -59,7 +60,7 @@
         }
 
         .logo {
-            max-width: 80px;
+            max-width: 150px;
             height: auto;
         }
 
@@ -658,6 +659,15 @@
             background-color: #e67e22;
         }
 
+        .btn-info {
+            background-color: var(--info-color);
+            color: white;
+        }
+
+        .btn-info:hover {
+            background-color: #2980b9;
+        }
+
         /* ===== OVERLAY ===== */
         .overlay {
             position: fixed;
@@ -798,6 +808,85 @@
             background-color: var(--dark-color);
         }
 
+        /* ===== FORMULÁRIO DE SELEÇÃO DE COMBOS ===== */
+        .combo-selection {
+            margin: 15px 0;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid var(--info-color);
+        }
+
+        .combo-title {
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: var(--info-color);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .combo-options {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .combo-option {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px;
+            background-color: white;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            transition: all 0.3s;
+        }
+
+        .combo-option:hover {
+            border-color: var(--info-color);
+        }
+
+        .combo-option input[type="radio"] {
+            margin: 0;
+        }
+
+        .combo-option img {
+            width: 40px;
+            height: 40px;
+            object-fit: cover;
+            border-radius: 5px;
+        }
+
+        .combo-option-info {
+            flex: 1;
+        }
+
+        .combo-option-name {
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .combo-option-description {
+            font-size: 0.8rem;
+            color: #666;
+        }
+
+        /* ===== ITEM DO CARRINHO COM COMBO ===== */
+        .combo-item {
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            padding: 8px;
+            margin-top: 5px;
+            border-left: 3px solid var(--info-color);
+        }
+
+        .combo-item-name {
+            font-size: 0.85rem;
+            color: #666;
+            font-style: italic;
+        }
+
         /* ===== RESPONSIVIDADE ===== */
         @media (min-width: 768px) {
             .products-grid {
@@ -883,7 +972,7 @@
     <div class="header">
         <div class="logo-container">
             <!-- ALTERE A LOGO AQUI -->
-            <img src="https://res.cloudinary.com/dnluplt44/image/upload/v1759236835/Logo_do_Showburger_com_Hamb%C3%BArguer_Ilustrado_ia4xzh.png" alt="Logo do Estabelecimento" class="logo">
+            <img src="https://via.placeholder.com/150x50?text=LOGO" alt="Logo do Estabelecimento" class="logo">
         </div>
         
         <div class="menu-toggle">
@@ -925,7 +1014,7 @@
             </div>
         </div>
         <div class="footer-copyright">
-            &copy; 2023 ShowBurguer - Todos os direitos reservados
+            &copy; 2023 Nome do Estabelecimento - Todos os direitos reservados
         </div>
         <div class="admin-icon" title="Área Administrativa">
             <i class="fas fa-cog"></i>
@@ -956,6 +1045,8 @@
                 <h2 class="popup-name"></h2>
                 <p class="popup-description"></p>
                 <div class="popup-price"></div>
+                <!-- Formulário de seleção de combo será inserido aqui dinamicamente -->
+                <div id="combo-selection-container"></div>
                 <div class="popup-actions">
                     <button class="popup-back-btn">Voltar ao Catálogo</button>
                     <button class="popup-add-btn">Adicionar ao Carrinho</button>
@@ -1001,6 +1092,16 @@
                             <label for="product-image">URL da Imagem:</label>
                             <input type="url" id="product-image" required>
                         </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="combo-category">Categoria para Combo (opcional):</label>
+                        <select id="combo-category">
+                            <option value="">Nenhuma - Produto normal</option>
+                            <!-- Categorias serão carregadas dinamicamente -->
+                        </select>
+                        <small style="color: #666; font-size: 0.85rem;">
+                            Se selecionar uma categoria, o cliente poderá escolher um produto dessa categoria ao adicionar este item ao carrinho.
+                        </small>
                     </div>
                     <div class="form-buttons">
                         <button type="button" class="btn btn-danger" id="cancel-edit" style="display: none;">Cancelar Edição</button>
@@ -1134,9 +1235,9 @@
 
         // ===== DADOS DO ESTABELECIMENTO (ALTERE AQUI) =====
         const establishmentData = {
-            name: "ShowBurguer",
-            phone: "5585989408154", // Número do WhatsApp com código do país
-            pixKey: "011111111" // Chave PIX do estabelecimento
+            name: "Nome do Estabelecimento",
+            phone: "5511999999999", // Número do WhatsApp com código do país
+            pixKey: "chave-pix-aqui" // Chave PIX do estabelecimento
         };
 
         // ===== VARIÁVEIS GLOBAIS =====
@@ -1147,6 +1248,7 @@
         let products = [];
         let isEditing = false;
         let currentEditingProductId = null;
+        let selectedComboProduct = null; // Produto selecionado no combo
 
         // ===== ELEMENTOS DO DOM =====
         const categoriesSidebar = document.querySelector('.categories-sidebar');
@@ -1173,6 +1275,7 @@
         const productForm = document.getElementById('product-form');
         const productsList = document.getElementById('products-list');
         const productCategorySelect = document.getElementById('product-category');
+        const comboCategorySelect = document.getElementById('combo-category');
         const addCategoryBtn = document.getElementById('add-category');
         const newCategoryInput = document.getElementById('new-category');
         const categoriesList = document.getElementById('categories-list');
@@ -1181,6 +1284,7 @@
         const productIdInput = document.getElementById('product-id');
         const submitProductBtn = document.getElementById('submit-product');
         const cancelEditBtn = document.getElementById('cancel-edit');
+        const comboSelectionContainer = document.getElementById('combo-selection-container');
 
         // ===== ELEMENTOS DO POPUP DE PRODUTO =====
         const productPopup = document.querySelector('.product-popup');
@@ -1394,12 +1498,19 @@
         // Atualizar seletor de categorias no formulário admin
         function updateCategorySelect() {
             productCategorySelect.innerHTML = '<option value="">Selecione uma categoria</option>';
+            comboCategorySelect.innerHTML = '<option value="">Nenhuma - Produto normal</option>';
+            
             categories.forEach(category => {
                 if (category.id !== 'all') {
                     const option = document.createElement('option');
                     option.value = category.id;
                     option.textContent = category.name;
                     productCategorySelect.appendChild(option);
+                    
+                    const comboOption = document.createElement('option');
+                    comboOption.value = category.id;
+                    comboOption.textContent = category.name;
+                    comboCategorySelect.appendChild(comboOption);
                 }
             });
         }
@@ -1435,6 +1546,12 @@
             products.forEach(product => {
                 const productItem = document.createElement('div');
                 productItem.className = 'product-item';
+                
+                const comboInfo = product.comboCategory ? 
+                    `<div style="font-size: 0.8rem; color: var(--info-color); margin-top: 5px;">
+                        <i class="fas fa-link"></i> Combo com: ${categories.find(c => c.id === product.comboCategory)?.name || product.comboCategory}
+                    </div>` : '';
+                
                 productItem.innerHTML = `
                     <div style="display: flex; align-items: center; gap: 10px;">
                         <img src="${product.image}" alt="${product.name}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 5px;">
@@ -1442,6 +1559,7 @@
                             <div><strong>${product.name}</strong></div>
                             <div>R$ ${product.price.toFixed(2)}</div>
                             <div style="font-size: 0.8rem; color: #666;">${categories.find(c => c.id === product.category)?.name || product.category}</div>
+                            ${comboInfo}
                         </div>
                     </div>
                     <div class="product-actions">
@@ -1477,6 +1595,7 @@
             document.getElementById('product-description').value = product.description;
             document.getElementById('product-category').value = product.category;
             document.getElementById('product-image').value = product.image;
+            document.getElementById('combo-category').value = product.comboCategory || '';
             productIdInput.value = productId;
             
             // Alterar o formulário para modo de edição
@@ -1499,6 +1618,44 @@
             submitProductBtn.textContent = 'Adicionar Produto';
             cancelEditBtn.style.display = 'none';
             productIdInput.value = '';
+        }
+
+        // Criar formulário de seleção de combo
+        function createComboSelection(comboCategoryId) {
+            const comboProducts = products.filter(product => product.category === comboCategoryId);
+            
+            if (comboProducts.length === 0) {
+                return '';
+            }
+            
+            let html = `
+                <div class="combo-selection">
+                    <div class="combo-title">
+                        <i class="fas fa-gift"></i>
+                        Escolha um item para incluir no combo:
+                    </div>
+                    <div class="combo-options">
+            `;
+            
+            comboProducts.forEach(product => {
+                html += `
+                    <label class="combo-option">
+                        <input type="radio" name="combo-product" value="${product.id}" required>
+                        <img src="${product.image}" alt="${product.name}">
+                        <div class="combo-option-info">
+                            <div class="combo-option-name">${product.name}</div>
+                            <div class="combo-option-description">${product.description}</div>
+                        </div>
+                    </label>
+                `;
+            });
+            
+            html += `
+                    </div>
+                </div>
+            `;
+            
+            return html;
         }
 
         // Inicializar quantidades dos produtos
@@ -1657,10 +1814,43 @@
             popupDescription.textContent = product.description;
             popupPrice.textContent = `R$ ${product.price.toFixed(2)}`;
             
+            // Limpar seleção anterior
+            selectedComboProduct = null;
+            
+            // Verificar se é um produto com combo
+            if (product.comboCategory) {
+                const comboHtml = createComboSelection(product.comboCategory);
+                comboSelectionContainer.innerHTML = comboHtml;
+                
+                // Adicionar event listeners para os radios
+                const radioButtons = comboSelectionContainer.querySelectorAll('input[name="combo-product"]');
+                radioButtons.forEach(radio => {
+                    radio.addEventListener('change', (e) => {
+                        selectedComboProduct = products.find(p => p.id === e.target.value);
+                    });
+                });
+            } else {
+                comboSelectionContainer.innerHTML = '';
+            }
+            
             // Configurar botão de adicionar ao carrinho no popup
             popupAddBtn.onclick = () => {
                 const quantity = productQuantities[product.id] || 1;
-                addToCart(product.id, product.name, product.price, quantity);
+                
+                // Verificar se é um combo e se foi selecionado um produto
+                if (product.comboCategory && !selectedComboProduct) {
+                    alert('Por favor, selecione um item para incluir no combo.');
+                    return;
+                }
+                
+                addToCart(
+                    product.id, 
+                    product.name, 
+                    product.price, 
+                    quantity,
+                    selectedComboProduct
+                );
+                
                 productQuantities[product.id] = 1;
                 
                 // Feedback visual
@@ -1696,20 +1886,24 @@
         }
 
         // Adicionar produto ao carrinho
-        function addToCart(productId, productName, productPrice, quantity = 1) {
-            const existingItem = cart.find(item => item.id === productId);
+        function addToCart(productId, productName, productPrice, quantity = 1, comboProduct = null) {
+            const cartItem = {
+                id: productId,
+                name: productName,
+                price: parseFloat(productPrice),
+                quantity: quantity
+            };
             
-            if (existingItem) {
-                existingItem.quantity += quantity;
-            } else {
-                cart.push({
-                    id: productId,
-                    name: productName,
-                    price: parseFloat(productPrice),
-                    quantity: quantity
-                });
+            // Adicionar informação do combo se existir
+            if (comboProduct) {
+                cartItem.comboProduct = {
+                    id: comboProduct.id,
+                    name: comboProduct.name,
+                    price: comboProduct.price
+                };
             }
             
+            cart.push(cartItem);
             updateCart();
         }
 
@@ -1757,9 +1951,22 @@
                 
                 const cartItemElement = document.createElement('div');
                 cartItemElement.className = 'cart-item';
+                
+                let comboHtml = '';
+                if (item.comboProduct) {
+                    comboHtml = `
+                        <div class="combo-item">
+                            <div class="combo-item-name">
+                                <i class="fas fa-gift"></i> Inclui: ${item.comboProduct.name}
+                            </div>
+                        </div>
+                    `;
+                }
+                
                 cartItemElement.innerHTML = `
                     <div class="item-info">
                         <div class="item-name">${item.name}</div>
+                        ${comboHtml}
                         <div class="item-price">R$ ${(item.price * item.quantity).toFixed(2)}</div>
                     </div>
                     <div class="item-quantity">
@@ -1822,6 +2029,11 @@
             
             cart.forEach(item => {
                 message += `- ${item.quantity}x ${item.name} - R$ ${(item.price * item.quantity).toFixed(2)}\n`;
+                
+                // Adicionar produto do combo se existir
+                if (item.comboProduct) {
+                    message += `  🎁 Inclui: ${item.comboProduct.name}\n`;
+                }
             });
             
             const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
@@ -1979,6 +2191,12 @@
                 category: document.getElementById('product-category').value,
                 image: document.getElementById('product-image').value
             };
+            
+            // Adicionar categoria do combo se selecionada
+            const comboCategory = document.getElementById('combo-category').value;
+            if (comboCategory) {
+                productData.comboCategory = comboCategory;
+            }
             
             if (isEditing && currentEditingProductId) {
                 updateProduct(currentEditingProductId, productData);
